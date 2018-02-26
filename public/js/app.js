@@ -1,96 +1,105 @@
-$(function(){
-  
-  
-  
-}); 
-
-
-
-$(function(){    
+/*global document, window, alert, console, $ require*/
+$(function () {
   var baseUrl = 'http://localhost:8282/';
   var $list = $('ul.books');
-  var $form = $('form.save');  
+  var $form = $('form.save');
   
-  console.log("HI");
-  alert("Hi");
   
+  ///////////////// list all books ///////////////////////////////////////
+
+  // when JSON array with books is loaded, create a list of books
   function renderList() {
+    
+    $.getJSON({
+      url: baseUrl + 'books'  // no semicolon here
+      
+    }).done(function (jsonArr) {
+      $list.empty();
+      
+      jsonArr.forEach(function (book) {
+        $list.append($('<li>', { 'data-id': book.id }) // li attribute stores the book's id
+             .append('<span>' + book.title + '</span>')
+             .append($('<button>', { 'class': 'delete-btn', text: 'delete'}))
+             .append('<div>')); // div to store table w/h book details
+      })
+    });
+  }
+  
+  ///////////////// get book's details ///////////////////////////////////////
+
+// when a (future) span is clicked book details are revealed
+  $list.on("click", "span", function (event) {
+    var $span = $(event.currentTarget);
 
     $.getJSON({
-      url: baseUrl + 'books'
-    }).done(function (jsonArr) {      
-      $list.empty();
+      url: baseUrl + 'books/' + $span.parent($("li")).data("id") // no semicolon here
+      
+    }).done(function (jsonBook) {
+      //create table to list book properties
+      var $tableHtml = $("<table><tbody>");
+      
+      for (var key in jsonBook) { 
+        $tableHtml.append($("<tr>")
+                  .append($("<td>", { text: key }))
+                  .append($("<td>", { text: jsonBook[key]})));
+      }
+      
+      $span.siblings("div").html($tableHtml); // append table on the sibling div 
+    })
+  });
 
-      jsonArr.forEach(function (book) {
-        $list.append($('<li>', {
-            'data-id': book.id
-          })
-          .append('<span>' + book.title + '</span>')
-          .append($('<button>', { 'class': 'delete-btn', text: 'delete' }))
-          .append('<div>'));
-      })
-    });
-  }  
+  ///////////////// delete book ///////////////////////////////////////
   
-  
-    $list.on("click", "span", function (event) {
-      var $span = $(event.currentTarget);
-
-      $.getJSON({
-        url: baseUrl + 'books/' + $span.parent($("li")).data("id") // tu nie ma średnika
-      }).done(function (json) {
-        var $tableHtml = $("<table>");
-        for (var key in json) { //dodac var do zmiennej
-          $tableHtml.append($("<tr>")
-            .append($("<td>", { text: key }))
-            .append($("<td>", { text: json[key] })));
-        }
-        $span.siblings("div").html($tableHtml);
-      })
-    });
-  
-  // tu musi byc event podpiety do PARENT!!!
-  $list.on("click", "button.delete-btn",  function(){     
+  // the parent list will handle the button's bubbling event
+  $list.on("click", "button.delete-btn", function () {
+    
     $.ajax({
-      url: baseUrl + 'books/remove/' + $(this).parent($("li")).data("id"), // tu nie moze byc srednika 
-      type: 'DELETE',      
-    }).done(function(){
-      renderList();      
+      url: baseUrl + 'books/remove/' + $(this).parent($("li")).data("id"), // add id from button's parent li
+      type: 'DELETE', // NOTE: the method
+    }).done(function () {
+      renderList(); // refresh list after deletion
     });
   });
-  
-  
-  
-  $form.on('submit',function (e) {
 
-    var book = {}; // process form
-    var $inputs =  $(this).find('input[type!=submit]');
-    $inputs.each(function (index, elem) {
-      console.log($(this));
-      book[elem.name] = elem.value;
+  ///////////////// add a book ///////////////////////////////////////
+
+  $form.on('submit', function (e) {
+
+    var book = {}; 
+    var $textInputs = $(this).find('input[type!=submit]');
+    
+    $textInputs.each(function (index, elem) {
+      book[elem.name] = elem.value; // create a JS book object
     });
+    // console.log(book); view the book
 
-    $.post({
-      headers: { // DODAJEMY HEADER
-        'Content-Type': 'application/json'
-      },
+    
+    $.post({   // send book data with POST as json
+      headers: { 'Content-Type': 'application/json' },
       url: baseUrl + 'books/add',
-      data: JSON.stringify(book) // ZAMIENIAMY JSoBJ NA STRING
+      data: JSON.stringify(book) // ZAMIENIAMY JSobject NA STRING
+      
     }).done(function (data) {
-      console.log(data);
+      //console.log(data); - will show the added object with its id
       renderList();
-    }).fail(function (xhr,status,error) {
-      console.log(xhr,status,error);
+      
+    }).fail(function (xhr, status, error) {
+      console.log(xhr, status, error);
     });
 
-    this.reset(); //CZYSCIMY POLA
-    e.preventDefault(); //po co? skoro i tak moge wyslac puste stringi?
+    this.reset(); //clean the form text inputs
+    e.preventDefault(); 
   });
   
-  renderList();  
+  ///////////////////////////////////////////////
+
+  renderList(); // dispalys the list when page is first loaded
+
 });
 
 
+
+  
 
 /*function getAllBookInfo(){
 
@@ -127,5 +136,3 @@ $(function(){
     });    
   }
   */
-  
- 
